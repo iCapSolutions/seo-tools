@@ -1,0 +1,13 @@
+# OS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# Per-project keyword files are NOT tracked here — they live in each site repo
