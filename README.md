@@ -1,6 +1,12 @@
 # seo-tools
 
-A shared toolkit for managing WordPress content, SEO, taxonomy, images, and WooCommerce operations via the command line. Designed to work with any WordPress site — just set your env vars and go.
+A shared SEO and content toolkit for managing WordPress sites and non-WordPress
+template-based sites via the command line. Designed to be a plug-in service
+usable by any project repo — just set your env vars and point at your files.
+
+Supports:
+- **WordPress** sites (via REST API + Rank Math)
+- **Template-based / static sites** (Perl, PHP, HTML — audit local files directly)
 
 ## Quick start
 
@@ -83,8 +89,9 @@ The script reads `seo-keywords.txt` from wherever you run it.
 
 | Script | Purpose |
 |---|---|
+| `audit_html_seo.py` | Audit local HTML/SHTML files or live URLs for SEO issues (platform-agnostic) |
 | `check_seo_rank.py` | Check Google ranking for your focus keywords (SerpApi) |
-| `check_rankmath_seo.py` | Validate Rank Math SEO completeness for a page |
+| `check_rankmath_seo.py` | Validate Rank Math SEO completeness for a page (WordPress only) |
 
 ### WooCommerce
 
@@ -127,16 +134,18 @@ export PATH="/path/to/seo-tools/scripts:$PATH"
 
 - [Page grooming workflow](docs/page-grooming.md) — step-by-step guide for reviewing and rewriting WordPress pages
 - [WordPress operations](docs/wordpress-operations.md) — full scripts reference and publishing details
+- [MailAddiction SEO](docs/mailaddiction-seo.md) — workflow for template-based / git-deployed sites (Perl/Apache)
 
 ## Requirements
 
 - bash (3.2+)
 - python3 (standard library only — no pip dependencies)
 - curl
-- WordPress with REST API enabled and an application password
-- Rank Math plugin (for SEO field management)
-- SerpApi key (for rank checking — 250 free searches/month)
+- **For template-based sites:** no external dependencies — just point at your HTML files
+- **For WordPress operations:** WordPress with REST API enabled and an application password
+- **For Rank Math fields:** Rank Math plugin
+- **For rank checking:** SerpApi key (250 free searches/month)
 
 ## Future
 
-This project started as internal tooling for [iCapSolutions](https://www.icapsolutions.com) and [MadKrab](https://www.madkrab.com). The long-term goal is to make this useful for anyone managing WordPress SEO from the command line — potentially as a WordPress plugin or standalone open-source project.
+This project started as internal tooling for [iCapSolutions](https://www.icapsolutions.com) and [MadKrab](https://www.madkrab.com). The long-term goal is to make this a plug-in SEO service usable by any project repo — WordPress or otherwise — via a shared scripts directory or eventually a standalone open-source package.
