@@ -90,6 +90,7 @@ The script reads `seo-keywords.txt` from wherever you run it.
 | Script | Purpose |
 |---|---|
 | `audit_html_seo.py` | Audit local HTML/SHTML files or live URLs for SEO issues (platform-agnostic) |
+| `verify_live_seo.py` | Quick post-deploy spot-check — confirm key SEO tags are present on a live page |
 | `check_seo_rank.py` | Check Google ranking for your focus keywords (SerpApi) |
 | `check_rankmath_seo.py` | Validate Rank Math SEO completeness for a page (WordPress only) |
 
@@ -107,6 +108,59 @@ The script reads `seo-keywords.txt` from wherever you run it.
 | `_wp_rankmath_payload.py` | Build Rank Math updateMeta payload |
 | `_wp_page_summary.py` | Pretty-print WP REST API responses |
 | `_wp_extract_fields.py` | Extract fields from WP JSON responses |
+
+## SEO workflow
+
+Three scripts cover the full cycle from editing to monitoring:
+
+```
+audit → fix → deploy → verify → monitor
+```
+
+### Step 1 — Audit before you edit
+
+Run against a local file or directory to find issues before committing:
+
+```sh
+python3 scripts/audit_html_seo.py path/to/templates/home.html
+python3 scripts/audit_html_seo.py path/to/templates/   # whole directory
+```
+
+Checks: `<title>`, `<meta description>`, viewport, canonical, Open Graph,
+Twitter Card, `<main>` landmark, heading structure, image `alt` attributes,
+unlabelled form inputs. Exit code 1 on any error-level finding.
+
+### Step 2 — Fix, commit, and deploy
+
+Edit the template file, commit to a feature branch, open a PR, and merge.
+For git-deployed sites (like mailaddiction) the deploy triggers automatically.
+
+### Step 3 — Verify the live page
+
+After every deploy, confirm the changes landed in the rendered HTML
+(catches issues from server-side includes, CDN caching, or redirects):
+
+```sh
+python3 scripts/verify_live_seo.py https://www.yoursite.com/
+```
+
+Checks: title, description, viewport, canonical, og:type/url/title/image,
+twitter:card, `<main>`, `<h1>`. Green ✓ / red ✗ per tag, exit 1 if any
+required tag is missing.
+
+### Step 4 — Monitor rankings
+
+Track keyword positions over time. Create `seo-keywords.txt` in your project
+directory (one keyword per line), then run from that directory:
+
+```sh
+cd /path/to/your-project
+export SERPAPI_KEY=your_key
+export TARGET_DOMAIN=yoursite.com
+python3 /path/to/seo-tools/scripts/check_seo_rank.py
+```
+
+---
 
 ## Using with existing projects
 
