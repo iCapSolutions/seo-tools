@@ -126,7 +126,7 @@ def crawl(start_url, delay=0.5, max_pages=500, timeout=15, verbose=False):
         code, body, last_mod = fetch(url, timeout=timeout)
 
         if verbose:
-            print(f"  {code:3d}  {url}", file=sys.stderr)
+            print("  {:3d}  {}".format(code, url), file=sys.stderr)
 
         if code == 200 and body:
             pages.append((url, last_mod))
@@ -149,16 +149,16 @@ def generate_sitemap(pages):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for url, last_mod in sorted(pages):
         lines.append("  <url>")
-        lines.append(f"    <loc>{url}</loc>")
+        lines.append("    <loc>{}</loc>".format(url))
         if last_mod:
             # Parse HTTP date to ISO format
             try:
                 dt = datetime.strptime(last_mod, "%a, %d %b %Y %H:%M:%S %Z")
-                lines.append(f"    <lastmod>{dt.strftime('%Y-%m-%d')}</lastmod>")
+                lines.append("    <lastmod>{}</lastmod>".format(dt.strftime("%Y-%m-%d")))
             except ValueError:
-                lines.append(f"    <lastmod>{now}</lastmod>")
+                lines.append("    <lastmod>{}</lastmod>".format(now))
         else:
-            lines.append(f"    <lastmod>{now}</lastmod>")
+            lines.append("    <lastmod>{}</lastmod>".format(now))
         lines.append("  </url>")
     lines.append("</urlset>")
     return "\n".join(lines) + "\n"
@@ -184,20 +184,20 @@ def main():
     # Normalize start URL
     start = args.url.rstrip("/") + "/"
 
-    print(f"Crawling {start} ...", file=sys.stderr)
+    print("Crawling {} ...".format(start), file=sys.stderr)
     t0 = time.time()
     pages = crawl(start, delay=args.delay, max_pages=args.max_pages,
                   timeout=args.timeout, verbose=args.verbose)
     elapsed = time.time() - t0
 
-    print(f"Found {len(pages)} pages in {elapsed:.1f}s", file=sys.stderr)
+    print("Found {} pages in {:.1f}s".format(len(pages), elapsed), file=sys.stderr)
 
     sitemap = generate_sitemap(pages)
 
     if args.output:
         with open(args.output, "w") as f:
             f.write(sitemap)
-        print(f"Wrote {args.output}", file=sys.stderr)
+        print("Wrote {}".format(args.output), file=sys.stderr)
     else:
         sys.stdout.write(sitemap)
 
