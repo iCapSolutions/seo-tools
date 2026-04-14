@@ -34,6 +34,14 @@ export SERPAPI_KEY=your_serpapi_key
 export TARGET_DOMAIN=yoursite.com
 ```
 
+GA4 Realtime reporting requires:
+
+```sh
+export GA4_PROPERTY_ID=your_property_id   # GA4 → Admin → Property Settings → Property ID
+# Auth via gcloud (already installed if you use Google Cloud):
+gcloud auth login
+```
+
 WooCommerce operations (optional) require:
 
 ```sh
@@ -93,6 +101,7 @@ The script reads `seo-keywords.txt` from wherever you run it.
 | `verify_live_seo.py` | Quick post-deploy spot-check — confirm key SEO tags are present on a live page |
 | `check_seo_rank.py` | Check Google ranking for your focus keywords (SerpApi) |
 | `check_rankmath_seo.py` | Validate Rank Math SEO completeness for a page (WordPress only) |
+| `ga4_active_users.py` | Query GA4 Realtime API for active users (last N minutes, with optional breakdowns) |
 
 ### WooCommerce
 

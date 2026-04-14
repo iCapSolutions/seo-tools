@@ -41,7 +41,8 @@ POST_TYPE="${POST_TYPE:-pages}"   # override with POST_TYPE=posts for blog posts
 UA="Mozilla/5.0 Chrome/120.0"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-LOG_FILE="${REPO_ROOT}/docs/page-grooming-log.md"
+# Allow callers to override the log path (e.g. per-project repos using seo-tools as shared tooling)
+LOG_FILE="${GROOMING_LOG:-${REPO_ROOT}/docs/page-grooming-log.md}"
 GROOMED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 # Build and send the WordPress page update payload
