@@ -34,13 +34,14 @@ export SERPAPI_KEY=your_serpapi_key
 export TARGET_DOMAIN=yoursite.com
 ```
 
-GA4 Realtime reporting requires:
+GA4 Realtime reporting requires a service account key and gcloud:
 
 ```sh
 export GA4_PROPERTY_ID=your_property_id   # GA4 → Admin → Property Settings → Property ID
-# Auth via gcloud (already installed if you use Google Cloud):
-gcloud auth login
+gcloud auth activate-service-account --key-file=/path/to/ga4-reader-key.json
 ```
+
+See [GA4 Realtime setup](#ga4-realtime-setup) below for full one-time setup steps.
 
 WooCommerce operations (optional) require:
 
@@ -167,6 +168,73 @@ cd /path/to/your-project
 export SERPAPI_KEY=your_key
 export TARGET_DOMAIN=yoursite.com
 python3 /path/to/seo-tools/scripts/check_seo_rank.py
+```
+
+---
+
+## GA4 Realtime setup
+
+One-time setup to enable `ga4_active_users.py`.
+
+### 1 — Create a service account
+
+```sh
+gcloud iam service-accounts create ga4-reader \
+  --display-name="GA4 Reader" \
+  --project=YOUR_GCP_PROJECT_ID
+
+gcloud iam service-accounts keys create ~/ga4-reader-key.json \
+  --iam-account=ga4-reader@YOUR_GCP_PROJECT_ID.iam.gserviceaccount.com
+```
+
+### 2 — Grant access in GA4
+
+In GA4 → Admin → **Property Access Management** → Add users:
+- Email: `ga4-reader@YOUR_GCP_PROJECT_ID.iam.gserviceaccount.com`
+- Role: **Viewer**
+
+### 3 — Activate the service account
+
+```sh
+gcloud auth activate-service-account \
+  --key-file=/path/to/ga4-reader-key.json
+```
+
+### 4 — Run the script
+
+```sh
+export GA4_PROPERTY_ID=your_9_digit_property_id
+python3 scripts/ga4_active_users.py
+
+# Or pass the property ID directly:
+python3 scripts/ga4_active_users.py 309879063
+```
+
+### Auth options
+
+The script tries authentication in this order:
+
+1. `GA4_ACCESS_TOKEN` env var — paste a token directly (e.g. from [OAuth Playground](https://developers.google.com/oauthplayground), scope: `analytics.readonly`)
+2. `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a service account JSON + `pip install google-auth`
+3. `gcloud auth activate-service-account --key-file=...` (recommended)
+
+### Usage examples
+
+```sh
+# Total active users, last 30 minutes (default)
+python3 scripts/ga4_active_users.py
+
+# Narrow the window to ~"right now"
+python3 scripts/ga4_active_users.py --minutes 5
+
+# Per-minute breakdown
+python3 scripts/ga4_active_users.py --breakdown
+
+# Breakdown by country / page / device / city
+python3 scripts/ga4_active_users.py --by country
+python3 scripts/ga4_active_users.py --by page
+python3 scripts/ga4_active_users.py --by device
+python3 scripts/ga4_active_users.py --by city
 ```
 
 ---

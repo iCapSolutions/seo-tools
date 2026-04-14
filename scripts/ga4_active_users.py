@@ -74,7 +74,8 @@ def get_access_token():
     # 3. gcloud CLI
     try:
         result = subprocess.run(
-            ["gcloud", "auth", "print-access-token"],
+            ["gcloud", "auth", "print-access-token",
+             "--scopes=https://www.googleapis.com/auth/analytics.readonly"],
             capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
@@ -134,9 +135,13 @@ def run_realtime_report(property_id, token, start_minutes_ago=29, dimensions=Non
 
 def get_total(response):
     totals = response.get("totals", [])
-    if totals:
+    if totals and totals[0].get("metricValues"):
         return int(totals[0]["metricValues"][0]["value"])
-    return sum(int(r["metricValues"][0]["value"]) for r in response.get("rows", []))
+    # Fall back to summing rows (also handles zero-result case)
+    rows = response.get("rows", [])
+    if not rows:
+        return 0
+    return sum(int(r["metricValues"][0]["value"]) for r in rows)
 
 
 def shorten(s, max_len=40):
