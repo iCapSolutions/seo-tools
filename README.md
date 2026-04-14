@@ -37,8 +37,15 @@ export TARGET_DOMAIN=yoursite.com
 GA4 Realtime reporting requires a service account key and gcloud:
 
 ```sh
-export GA4_PROPERTY_ID=your_property_id   # GA4 → Admin → Property Settings → Property ID
+# Activate your service account once:
 gcloud auth activate-service-account --key-file=/path/to/ga4-reader-key.json
+
+# Query a specific property:
+export GA4_PROPERTY_ID=your_9_digit_property_id
+python3 scripts/ga4_active_users.py
+
+# Or query all configured properties at once:
+python3 scripts/ga4_active_users.py --all
 ```
 
 See [GA4 Realtime setup](#ga4-realtime-setup) below for full one-time setup steps.
@@ -174,9 +181,24 @@ python3 /path/to/seo-tools/scripts/check_seo_rank.py
 
 ## GA4 Realtime setup
 
-One-time setup to enable `ga4_active_users.py`.
+One-time setup to enable `ga4_active_users.py`. The same service account works
+across all your GA4 properties — you only create it once.
 
-### 1 — Create a service account
+### 1 — Enable the required GCP APIs
+
+In the [Google Cloud Console](https://console.cloud.google.com/apis/library),
+enable both APIs for your project:
+- **Google Analytics Data API** (`analyticsdata.googleapis.com`)
+- **Google Analytics Admin API** (`analyticsadmin.googleapis.com`)
+
+Or via gcloud:
+
+```sh
+gcloud services enable analyticsdata.googleapis.com analyticsadmin.googleapis.com \
+  --project=YOUR_GCP_PROJECT_ID
+```
+
+### 2 — Create a service account
 
 ```sh
 gcloud iam service-accounts create ga4-reader \
@@ -187,27 +209,44 @@ gcloud iam service-accounts keys create ~/ga4-reader-key.json \
   --iam-account=ga4-reader@YOUR_GCP_PROJECT_ID.iam.gserviceaccount.com
 ```
 
-### 2 — Grant access in GA4
+### 3 — Grant access in GA4 (repeat for each property)
 
-In GA4 → Admin → **Property Access Management** → Add users:
+For each site you want to monitor, go to:
+GA4 → Admin → **Property Access Management** → Add users
 - Email: `ga4-reader@YOUR_GCP_PROJECT_ID.iam.gserviceaccount.com`
 - Role: **Viewer**
 
-### 3 — Activate the service account
+The service account only sees properties it has been explicitly invited to.
+
+### 4 — Activate the service account
 
 ```sh
 gcloud auth activate-service-account \
   --key-file=/path/to/ga4-reader-key.json
 ```
 
-### 4 — Run the script
+This persists in your gcloud config — you only need to run it once per machine.
+
+### 5 — Register properties in the script
+
+Open `scripts/ga4_active_users.py` and add each site to `KNOWN_PROPERTIES`:
+
+```python
+KNOWN_PROPERTIES = {
+    "yoursite.com":    "123456789",   # GA4 property ID
+    "anothersite.com": "987654321",
+}
+```
+
+Find the numeric Property ID in GA4 → Admin → Property Settings → **Property ID**.
+
+Alternatively, once the service account has access, list all your properties:
 
 ```sh
-export GA4_PROPERTY_ID=your_9_digit_property_id
-python3 scripts/ga4_active_users.py
-
-# Or pass the property ID directly:
-python3 scripts/ga4_active_users.py 309879063
+TOKEN=$(gcloud auth print-access-token \
+  --scopes=https://www.googleapis.com/auth/analytics.readonly)
+curl -s "https://analyticsadmin.googleapis.com/v1beta/properties?filter=parent:accounts/-" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Auth options
@@ -221,20 +260,27 @@ The script tries authentication in this order:
 ### Usage examples
 
 ```sh
-# Total active users, last 30 minutes (default)
+# All configured properties — summary table
+python3 scripts/ga4_active_users.py --all
+
+# Single property by ID
+python3 scripts/ga4_active_users.py 309879063
+
+# Single property via env var
+export GA4_PROPERTY_ID=309879063
 python3 scripts/ga4_active_users.py
 
 # Narrow the window to ~"right now"
-python3 scripts/ga4_active_users.py --minutes 5
+python3 scripts/ga4_active_users.py --all --minutes 5
 
-# Per-minute breakdown
-python3 scripts/ga4_active_users.py --breakdown
+# Per-minute breakdown for one site
+python3 scripts/ga4_active_users.py 309879063 --breakdown
 
 # Breakdown by country / page / device / city
-python3 scripts/ga4_active_users.py --by country
-python3 scripts/ga4_active_users.py --by page
-python3 scripts/ga4_active_users.py --by device
-python3 scripts/ga4_active_users.py --by city
+python3 scripts/ga4_active_users.py 309879063 --by country
+python3 scripts/ga4_active_users.py 309879063 --by page
+python3 scripts/ga4_active_users.py 309879063 --by device
+python3 scripts/ga4_active_users.py 309879063 --by city
 ```
 
 ---
@@ -276,6 +322,7 @@ export PATH="/path/to/seo-tools/scripts:$PATH"
 - **For WordPress operations:** WordPress with REST API enabled and an application password
 - **For Rank Math fields:** Rank Math plugin
 - **For rank checking:** SerpApi key (250 free searches/month)
+- **For GA4 Realtime reporting:** gcloud CLI + a GCP service account with GA4 Viewer access
 
 ## Future
 
