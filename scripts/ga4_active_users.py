@@ -8,6 +8,7 @@ Uses your active gcloud login — no pip dependencies required.
 Usage:
     python3 scripts/ga4_active_users.py                      # last 30 min, default property
     python3 scripts/ga4_active_users.py 123456789            # specific property ID
+    python3 scripts/ga4_active_users.py --all                # all known properties, summary table
     python3 scripts/ga4_active_users.py --minutes 5          # narrow the window (e.g. "right now")
     python3 scripts/ga4_active_users.py --breakdown          # per-minute count breakdown
     python3 scripts/ga4_active_users.py --by country         # breakdown by country
@@ -16,8 +17,9 @@ Usage:
     python3 scripts/ga4_active_users.py --by city            # breakdown by city
 
 Property ID (in order of precedence):
-    1. Positional CLI argument
-    2. GA4_PROPERTY_ID env var
+    1. --all flag  (queries all entries in KNOWN_PROPERTIES)
+    2. Positional CLI argument
+    3. GA4_PROPERTY_ID env var
 
     Find your Property ID in GA4 → Admin → Property Settings → Property ID.
 
@@ -38,6 +40,15 @@ import urllib.error
 from datetime import datetime, timezone
 
 DIVIDER = "  " + "─" * 60
+
+# Known GA4 properties — add new sites here as you grant access.
+# Format: "display_name": "property_id"
+KNOWN_PROPERTIES = {
+    "icapsolutions.com":    "309879063",
+    "glamourpuss.com":      "397152726",
+    "happyhourcircuit.com": "528520331",
+    "numbercrate.com":      "532631310",
+}
 
 DIM_MAP = {
     "country":  "country",
@@ -95,7 +106,7 @@ def get_access_token():
     sys.exit(1)
 
 
-def run_realtime_report(property_id, token, start_minutes_ago=29, dimensions=None):
+def run_realtime_report(property_id, token, start_minutes_ago=29, dimensions=None, silent=False):
     url = (
         "https://analyticsdata.googleapis.com/v1beta"
         f"/properties/{property_id}:runRealtimeReport"
@@ -126,9 +137,13 @@ def run_realtime_report(property_id, token, start_minutes_ago=29, dimensions=Non
             msg = json.loads(body).get("error", {}).get("message", body)
         except Exception:
             msg = body
+        if silent:
+            return None
         print(f"\n  HTTP {e.code}: {msg}\n")
         sys.exit(1)
     except Exception as e:
+        if silent:
+            return None
         print(f"\n  Request error: {e}\n")
         sys.exit(1)
 
@@ -150,6 +165,7 @@ def shorten(s, max_len=40):
 
 def parse_args(args):
     opts = {
+        "all":       False,
         "breakdown": False,
         "by_dim":    None,
         "minutes":   30,
@@ -157,6 +173,10 @@ def parse_args(args):
     }
 
     args = list(args)
+
+    if "--all" in args:
+        opts["all"] = True
+        args.remove("--all")
 
     if "--breakdown" in args:
         opts["breakdown"] = True
@@ -183,13 +203,6 @@ def parse_args(args):
 def main():
     opts = parse_args(sys.argv[1:])
 
-    property_id = opts["property"] or os.environ.get("GA4_PROPERTY_ID", "")
-    if not property_id:
-        print("\n  Error: GA4 property ID required.")
-        print("  Pass as argument or: export GA4_PROPERTY_ID=your_property_id")
-        print("  Find it in: GA4 → Admin → Property Settings → Property ID\n")
-        sys.exit(1)
-
     if opts["by_dim"] and opts["by_dim"] not in DIM_MAP:
         print(f"\n  Error: unknown dimension '{opts['by_dim']}'.")
         print(f"  Options: {', '.join(DIM_MAP)}\n")
@@ -197,6 +210,38 @@ def main():
 
     start_minutes_ago = opts["minutes"] - 1  # API is 0-indexed (0 = current minute)
     window = opts["minutes"]
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    token = get_access_token()
+
+    # ── All-properties summary ──────────────────────────────────────────────
+    if opts["all"]:
+        print(f"\n  GA4 Realtime — all properties")
+        print(f"  {now}  |  last {window} minute{'s' if window != 1 else ''}")
+        print()
+        print(DIVIDER)
+        print(f"  {'SITE':<28} {'PROPERTY ID':>12}  {'ACTIVE USERS':>12}")
+        print(DIVIDER)
+        grand_total = 0
+        for name, pid in KNOWN_PROPERTIES.items():
+            resp = run_realtime_report(pid, token, start_minutes_ago, silent=True)
+            if resp is None:
+                print(f"  {shorten(name, 28):<28} {pid:>12}  {'ERROR':>12}")
+            else:
+                count = get_total(resp)
+                grand_total += count
+                print(f"  {shorten(name, 28):<28} {pid:>12}  {count:>12}")
+        print(DIVIDER)
+        print(f"  {'TOTAL':<28} {'':>12}  {grand_total:>12}")
+        print()
+        return grand_total
+
+    # ── Single-property mode ────────────────────────────────────────────────
+    property_id = opts["property"] or os.environ.get("GA4_PROPERTY_ID", "")
+    if not property_id:
+        print("\n  Error: GA4 property ID required.")
+        print("  Pass as argument, set GA4_PROPERTY_ID, or use --all")
+        print("  Find it in: GA4 → Admin → Property Settings → Property ID\n")
+        sys.exit(1)
 
     dimensions = []
     if opts["breakdown"]:
@@ -204,12 +249,14 @@ def main():
     elif opts["by_dim"]:
         dimensions = [DIM_MAP[opts["by_dim"]]]
 
-    token = get_access_token()
     response = run_realtime_report(property_id, token, start_minutes_ago, dimensions or None)
     total = get_total(response)
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    print(f"\n  GA4 Realtime — property {property_id}")
+    # Resolve display name if it's a known property
+    name_map = {v: k for k, v in KNOWN_PROPERTIES.items()}
+    display = name_map.get(property_id, f"property {property_id}")
+
+    print(f"\n  GA4 Realtime — {display}")
     print(f"  {now}  |  last {window} minute{'s' if window != 1 else ''}")
     print()
     print(DIVIDER)
