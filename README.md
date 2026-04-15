@@ -103,13 +103,14 @@ The script reads `seo-keywords.txt` from wherever you run it.
 
 ### SEO
 
-| Script | Purpose |
-|---|---|
-| `audit_html_seo.py` | Audit local HTML/SHTML files or live URLs for SEO issues (platform-agnostic) |
-| `verify_live_seo.py` | Quick post-deploy spot-check — confirm key SEO tags are present on a live page |
-| `check_seo_rank.py` | Check Google ranking for your focus keywords (SerpApi) |
-| `check_rankmath_seo.py` | Validate Rank Math SEO completeness for a page (WordPress only) |
-| `ga4_active_users.py` | Query GA4 Realtime API for active users (last N minutes, with optional breakdowns) |
+|| Script | Purpose |
+||---|---|
+|| `audit_html_seo.py` | Audit local HTML/SHTML files or live URLs for SEO issues (platform-agnostic) |
+|| `verify_live_seo.py` | Quick post-deploy spot-check — confirm key SEO tags are present on a live page |
+|| `check_seo_rank.py` | Check Google ranking for your focus keywords (SerpApi) |
+|| `check_rankmath_seo.py` | Validate Rank Math SEO completeness for a page (WordPress only) |
+|| `ga4_active_users.py` | Query GA4 Realtime API for active users (last N minutes, with optional breakdowns) |
+|| `gsc_search_analytics.py` | Query Google Search Console Search Analytics API for clicks, impressions, CTR, and rankings |
 
 ### WooCommerce
 
@@ -282,6 +283,97 @@ python3 scripts/ga4_active_users.py 309879063 --by page
 python3 scripts/ga4_active_users.py 309879063 --by device
 python3 scripts/ga4_active_users.py 309879063 --by city
 ```
+
+---
+
+## Google Search Console setup
+
+One-time setup to enable `gsc_search_analytics.py`. The same service account works
+for all your Search Console properties — you only set it up once.
+
+### 1 — Enable the Search Console API
+
+In the [Google Cloud Console](https://console.cloud.google.com/apis/library),
+enable the API for your project:
+- **Google Search Console API** (`searchconsole.googleapis.com`)
+
+Or via gcloud:
+
+```sh
+gcloud services enable searchconsole.googleapis.com \
+  --project=YOUR_GCP_PROJECT_ID
+```
+
+### 2 — Grant the service account access in Search Console
+
+For each site you want to query, go to:
+Search Console → **Settings** → **Users and permissions** → **Invite users**
+- Email: `ga4-reader@YOUR_GCP_PROJECT_ID.iam.gserviceaccount.com`
+- Role: **Owner** or **Full** access (minimum needed for Search Analytics API)
+
+Alternatively, use the `gcloud` CLI to manage permissions if your GCP account has the necessary IAM roles.
+
+### 3 — Register properties in the script
+
+Open `scripts/gsc_search_analytics.py` and add each site to `KNOWN_SITES`.
+Use the **URL-prefix format** (as shown in Search Console) — e.g., `https://www.example.com/`:
+
+```python
+KNOWN_SITES = {
+    "yoursite.com":     "https://www.yoursite.com/",
+    "anothersite.com":  "https://www.anothersite.com/",
+}
+```
+
+To list all properties your service account can access:
+
+```sh
+python3 scripts/gsc_search_analytics.py --all
+```
+
+If you see a 403 permission error, verify the service account has been invited to that property in Search Console.
+
+### Auth options
+
+The script tries authentication in this order:
+
+1. `GSC_ACCESS_TOKEN` env var — paste a token directly (e.g. from [OAuth Playground](https://developers.google.com/oauthplayground), scope: `webmasters.readonly`)
+2. `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a service account JSON + `pip install google-auth`
+3. `gcloud auth activate-service-account --key-file=...` (recommended, reuses your GA4 service account)
+
+### Usage examples
+
+```sh
+# All configured properties — last 90 days, grouped by query
+python3 scripts/gsc_search_analytics.py --all
+
+# Single site — last 90 days, grouped by query
+python3 scripts/gsc_search_analytics.py https://www.yoursite.com/
+
+# Last 7 days
+python3 scripts/gsc_search_analytics.py https://www.yoursite.com/ --days 7
+
+# Breakdown by country
+python3 scripts/gsc_search_analytics.py https://www.yoursite.com/ --by country
+
+# Breakdown by device (DESKTOP, MOBILE, TABLET)
+python3 scripts/gsc_search_analytics.py https://www.yoursite.com/ --by device
+
+# Breakdown by page
+python3 scripts/gsc_search_analytics.py https://www.yoursite.com/ --by page
+
+# Multiple dimensions at once (query + country)
+python3 scripts/gsc_search_analytics.py https://www.yoursite.com/ --by query --by country
+
+# Last 30 days, all sites, grouped by device
+python3 scripts/gsc_search_analytics.py --all --days 30 --by device
+```
+
+Output is a formatted table with:
+- **Clicks** — number of clicks from Google Search results
+- **Impressions** — how many times your URL appeared in results
+- **CTR** — click-through rate (Clicks / Impressions)
+- **Position** — average ranking position
 
 ---
 
