@@ -111,6 +111,8 @@ The script reads `seo-keywords.txt` from wherever you run it.
 || `check_rankmath_seo.py` | Validate Rank Math SEO completeness for a page (WordPress only) |
 || `ga4_active_users.py` | Query GA4 Realtime API for active users (last N minutes, with optional breakdowns) |
 || `gsc_search_analytics.py` | Query Google Search Console Search Analytics API for clicks, impressions, CTR, and rankings |
+|| `gsc_url_inspection.py` | Check indexing status of specific URLs via the URL Inspection API |
+|| `gsc_submit_sitemap.py` | Submit sitemaps to Google Search Console for immediate crawling |
 
 ### WooCommerce
 
@@ -374,6 +376,71 @@ Output is a formatted table with:
 - **Impressions** — how many times your URL appeared in results
 - **CTR** — click-through rate (Clicks / Impressions)
 - **Position** — average ranking position
+
+---
+
+## Google Search Console URL Inspection & Sitemap Submission
+
+Two complementary scripts for monitoring and expediting page indexing:
+
+### Check which URLs are indexed
+
+`gsc_url_inspection.py` queries the URL Inspection API to see if individual pages are indexed.
+
+**Load URLs from CLI:**
+```sh
+python3 scripts/gsc_url_inspection.py \
+  https://www.yoursite.com/ \
+  https://www.yoursite.com/page-1 \
+  https://www.yoursite.com/page-2 \
+  https://www.yoursite.com/
+```
+
+**Load URLs from file:**
+```sh
+python3 scripts/gsc_url_inspection.py --file urls.txt https://www.yoursite.com/
+```
+
+**Load URLs from sitemap:**
+```sh
+python3 scripts/gsc_url_inspection.py --sitemap https://www.yoursite.com/sitemap.xml https://www.yoursite.com/
+```
+
+Output shows:
+- ✓ **INDEXED** — Page is in Google's index
+- ? **Discovered** — Google found it but hasn't indexed yet (may index soon)
+- ✗ **NOT CRAWLED** — Google hasn't visited this URL
+- ? **Unknown** — URL not yet known to Google
+
+### Submit sitemaps for immediate crawling
+
+`gsc_submit_sitemap.py` tells Google to immediately crawl and process your sitemap, prioritizing newly added URLs.
+
+**Submit one sitemap:**
+```sh
+python3 scripts/gsc_submit_sitemap.py https://www.yoursite.com/sitemap.xml https://www.yoursite.com/
+```
+
+**Submit multiple sitemaps:**
+```sh
+python3 scripts/gsc_submit_sitemap.py \
+  https://www.yoursite.com/sitemap.xml \
+  https://www.yoursite.com/sitemap_news.xml \
+  https://www.yoursite.com/
+```
+
+Useful workflow:
+1. Check which pages are **Discovered** but not indexed (using `gsc_url_inspection.py`)
+2. Submit the sitemap (using `gsc_submit_sitemap.py`) to expedite indexing
+3. Recheck URLs in 24-48 hours to monitor indexing progress
+
+### Auth for URL Inspection & Sitemap Submission
+
+Both scripts require **Owner or Full access** to the Search Console property (not just "Full" access). Same auth options as other GSC scripts:
+
+1. `GSC_ACCESS_TOKEN` env var
+2. `GOOGLE_APPLICATION_CREDENTIALS` + service account JSON
+3. `gcloud auth` (recommended, reuses your existing GA4 service account)
 
 ---
 
