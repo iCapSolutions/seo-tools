@@ -113,6 +113,7 @@ The script reads `seo-keywords.txt` from wherever you run it.
 || `gsc_search_analytics.py` | Query Google Search Console Search Analytics API for clicks, impressions, CTR, and rankings |
 || `gsc_url_inspection.py` | Check indexing status of specific URLs via the URL Inspection API |
 || `gsc_submit_sitemap.py` | Submit sitemaps to Google Search Console for immediate crawling |
+|| `sitemap_crawl.py` | Crawl template-based sites and generate policy-controlled sitemap.xml output |
 
 ### WooCommerce
 
