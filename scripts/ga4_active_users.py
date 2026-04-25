@@ -48,6 +48,7 @@ KNOWN_PROPERTIES = {
     "glamourpuss.com":      "397152726",
     "happyhourcircuit.com": "528520331",
     "numbercrate.com":      "532631310",
+    "mailaddiction.com":    "372032480",
 }
 
 DIM_MAP = {
